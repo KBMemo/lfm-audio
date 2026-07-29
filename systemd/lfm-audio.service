@@ -1,0 +1,19 @@
+[Unit]
+Description=KBMemo LFM2.5 Audio service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/services/lfm-audio
+EnvironmentFile=%h/services/lfm-audio/.env.production
+ExecStart=%h/services/lfm-audio/.venv/bin/lfm-audio-service
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
+
