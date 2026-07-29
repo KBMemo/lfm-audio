@@ -31,7 +31,8 @@ set -a; . ./.env; set +a
 
 The first transcription or synthesis loads model weights. Run a warmup request
 before evaluating latency. Keep the service bound to loopback or a private
-network and set a non-empty service token.
+network and set a non-empty service token. On CPU-only hosts, set
+`LFM_AUDIO_CPU_THREADS` to the number of usable CPU cores.
 
 ## Smoke checks
 

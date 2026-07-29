@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import os
 import threading
 
 
@@ -25,6 +26,7 @@ class LiquidAudioRuntime:
     """
 
     SAMPLE_RATE = 24_000
+    TTS_MAX_NEW_TOKENS = 128
     ASR_PROMPT = "Perform ASR in japanese."
     TTS_PROMPT = "Perform TTS in japanese."
 
@@ -79,7 +81,7 @@ class LiquidAudioRuntime:
 
             audio_tokens = []
             for token in self._model.generate_sequential(
-                **chat, max_new_tokens=512, audio_temperature=0.8, audio_top_k=64
+                **chat, max_new_tokens=self.TTS_MAX_NEW_TOKENS, audio_temperature=0.8, audio_top_k=64
             ):
                 if token.numel() > 1:
                     audio_tokens.append(token)
@@ -97,9 +99,14 @@ class LiquidAudioRuntime:
             return
 
         try:
+            import torch
             from liquid_audio import LFM2AudioModel, LFM2AudioProcessor
         except ImportError as error:
             raise GenerationError("liquid-audio がインストールされていません。") from error
+
+        cpu_threads = int(os.environ.get("LFM_AUDIO_CPU_THREADS", "0"))
+        if cpu_threads > 0:
+            torch.set_num_threads(cpu_threads)
 
         self._processor = LFM2AudioProcessor.from_pretrained(self.model_id).eval()
         self._model = LFM2AudioModel.from_pretrained(self.model_id).eval()
