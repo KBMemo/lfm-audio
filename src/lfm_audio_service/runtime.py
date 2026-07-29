@@ -3,6 +3,7 @@ from __future__ import annotations
 from io import BytesIO
 import os
 import re
+import subprocess
 import threading
 
 
@@ -28,6 +29,9 @@ class LiquidAudioRuntime:
 
     SAMPLE_RATE = 24_000
     TTS_MAX_NEW_TOKENS = 128
+    ASR_SAMPLE_RATE = 16_000
+    ASR_MAX_DURATION_SECONDS = 600
+    ASR_DECODE_TIMEOUT_SECONDS = 30
     ASR_PROMPT = "Perform ASR in japanese."
     TTS_PROMPT = "Perform TTS in japanese."
 
@@ -44,9 +48,9 @@ class LiquidAudioRuntime:
 
     def transcribe(self, audio_bytes: bytes) -> str:
         with self._lock:
-            self._load()
             torch, soundfile, chat_state = self._imports()
             wav, sample_rate = self._read_audio(soundfile, audio_bytes)
+            self._load()
 
             chat = chat_state(self._processor)
             chat.new_turn("system")
@@ -128,10 +132,12 @@ class LiquidAudioRuntime:
             raise GenerationError("LFM audio runtime の依存関係を読み込めません。") from error
         return torch, soundfile, ChatState
 
-    @staticmethod
-    def _read_audio(soundfile, audio_bytes: bytes):
+    @classmethod
+    def _read_audio(cls, soundfile, audio_bytes: bytes):
         try:
-            wav, sample_rate = soundfile.read(BytesIO(audio_bytes), dtype="float32", always_2d=True)
+            wav, sample_rate = soundfile.read(
+                BytesIO(cls._normalize_asr_audio(audio_bytes)), dtype="float32", always_2d=True
+            )
         except RuntimeError as error:
             raise AudioDecodeError("対応していない、または壊れた音声ファイルです。") from error
 
@@ -140,3 +146,32 @@ class LiquidAudioRuntime:
 
         # The model accepts a single waveform. Downmix multi-channel recordings.
         return wav.mean(axis=1), sample_rate
+
+    @classmethod
+    def _normalize_asr_audio(cls, audio_bytes: bytes) -> bytes:
+        """Decode browser audio outside libsndfile to avoid codec-specific crashes."""
+        try:
+            result = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-nostdin",
+                    "-v", "error",
+                    "-i", "pipe:0",
+                    "-t", str(cls.ASR_MAX_DURATION_SECONDS),
+                    "-ac", "1",
+                    "-ar", str(cls.ASR_SAMPLE_RATE),
+                    "-f", "wav",
+                    "pipe:1",
+                ],
+                input=audio_bytes,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=cls.ASR_DECODE_TIMEOUT_SECONDS,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+            raise AudioDecodeError("音声ファイルをデコードできませんでした。") from error
+
+        if result.returncode != 0 or not result.stdout:
+            raise AudioDecodeError("対応していない、または壊れた音声ファイルです。")
+        return result.stdout

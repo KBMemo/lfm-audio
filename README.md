@@ -9,6 +9,11 @@ not TTS: its LFM2.5 audio detokenizer requires CUDA. For CPU TTS, enable the
 official LFM2.5-Audio-JP GGUF runner. The facade keeps the same audio API and
 forwards synthesis to the runner's private OpenAI-compatible endpoint.
 
+ASR input is decoded with `ffmpeg` before it reaches the Python model runtime.
+Install `ffmpeg` on every host that runs this service. This safely accepts the
+browser's WebM/Opus recordings without passing container codecs directly to
+the native audio decoder.
+
 ## API
 
 All audio endpoints require `Authorization: Bearer $LFM_AUDIO_TOKEN`.
