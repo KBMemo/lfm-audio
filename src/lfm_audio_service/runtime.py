@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import os
+import re
 import threading
 
 
@@ -61,7 +62,8 @@ class LiquidAudioRuntime:
                 if token.numel() == 1:
                     tokens.append(token)
 
-            text = "".join(self._processor.text.decode(token) for token in tokens).strip()
+            text = "".join(self._processor.text.decode(token) for token in tokens)
+            text = re.sub(r"<\|[^|]+\|>", "", text).strip()
             if not text:
                 raise GenerationError("音声から文字起こし結果を取得できませんでした。")
             return text
