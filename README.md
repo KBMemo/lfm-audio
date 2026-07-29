@@ -23,8 +23,7 @@ as multipart `file`, plus `model=LiquidAI/LFM2.5-Audio-1.5B-JP`. It returns
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m ensurepip --upgrade
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e '.[dev]'
+scripts/install_cpu.sh
 cp env.example .env
 set -a; . ./.env; set +a
 .venv/bin/lfm-audio-service
