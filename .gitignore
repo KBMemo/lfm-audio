@@ -2,9 +2,12 @@
 __pycache__/
 *.py[cod]
 .env
+.env.production
+.venv/
+models/
+vendor/
 .pytest_cache/
 .ruff_cache/
 dist/
 build/
 *.egg-info/
-

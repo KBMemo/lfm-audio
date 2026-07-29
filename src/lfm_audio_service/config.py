@@ -17,6 +17,8 @@ class Settings:
     max_input_chars: int
     cpu_threads: int
     device: str
+    tts_backend: str
+    runner_url: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -29,4 +31,6 @@ class Settings:
             max_input_chars=int(os.environ.get("LFM_AUDIO_MAX_INPUT_CHARS", "4000")),
             cpu_threads=int(os.environ.get("LFM_AUDIO_CPU_THREADS", "0")),
             device=os.environ.get("LFM_AUDIO_DEVICE", "cpu").strip(),
+            tts_backend=os.environ.get("LFM_AUDIO_TTS_BACKEND", "disabled").strip(),
+            runner_url=os.environ.get("LFM_AUDIO_RUNNER_URL", "http://127.0.0.1:10121").rstrip("/"),
         )

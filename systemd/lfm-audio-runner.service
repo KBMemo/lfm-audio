@@ -1,0 +1,18 @@
+[Unit]
+Description=KBMemo LFM2.5 Audio GGUF runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/services/lfm-audio
+EnvironmentFile=%h/services/lfm-audio/.env.production
+ExecStart=%h/services/lfm-audio/vendor/llama-liquid-audio/llama-liquid-audio-ubuntu-x64/llama-liquid-audio-server -m %h/services/lfm-audio/models/LFM2.5-Audio-1.5B-JP-GGUF/LFM2.5-Audio-1.5B-JP-Q4_0.gguf -mm %h/services/lfm-audio/models/LFM2.5-Audio-1.5B-JP-GGUF/mmproj-LFM2.5-Audio-1.5B-JP-Q4_0.gguf -mv %h/services/lfm-audio/models/LFM2.5-Audio-1.5B-JP-GGUF/vocoder-LFM2.5-Audio-1.5B-JP-Q4_0.gguf --tts-speaker-file %h/services/lfm-audio/models/LFM2.5-Audio-1.5B-JP-GGUF/tokenizer-LFM2.5-Audio-1.5B-JP-Q4_0.gguf --host 127.0.0.1 --port 10121 --threads ${LFM_AUDIO_CPU_THREADS}
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

@@ -8,6 +8,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .config import Settings
+from .runner import LlamaCppSpeechRuntime
 from .runtime import AudioDecodeError, GenerationError, LiquidAudioRuntime
 
 
@@ -24,6 +25,7 @@ class SpeechRequest(BaseModel):
 def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     runtime = runtime or LiquidAudioRuntime(settings.model, device=settings.device)
+    speech_runtime = _speech_runtime(settings, runtime)
     app = FastAPI(title="LFM Audio Service", version="0.1.0")
 
     def require_token(authorization: str | None = Header(default=None)) -> None:
@@ -43,7 +45,8 @@ def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | N
             "model": settings.model,
             "device": settings.device,
             "loaded": runtime.loaded,
-            "capabilities": {"transcription": True, "speech": settings.device != "cpu"},
+            "capabilities": {"transcription": True, "speech": speech_runtime is not None},
+            "tts_backend": settings.tts_backend,
         }
 
     @app.post("/v1/audio/transcriptions", dependencies=[Depends(require_token)])
@@ -83,9 +86,19 @@ def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | N
             raise HTTPException(status_code=413, detail="speech input is too long")
 
         try:
-            audio = await run_in_threadpool(runtime.synthesize, request.input)
+            if speech_runtime is None:
+                raise GenerationError("音声合成 backend が設定されていません。")
+            audio = await run_in_threadpool(speech_runtime.synthesize, request.input)
         except GenerationError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
         return Response(content=audio, media_type="audio/wav")
 
     return app
+
+
+def _speech_runtime(settings: Settings, runtime: LiquidAudioRuntime):
+    if settings.tts_backend == "llama_cpp":
+        return LlamaCppSpeechRuntime(settings.runner_url)
+    if settings.tts_backend == "python":
+        return runtime
+    return None
