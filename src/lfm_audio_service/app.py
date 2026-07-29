@@ -23,7 +23,7 @@ class SpeechRequest(BaseModel):
 
 def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
-    runtime = runtime or LiquidAudioRuntime(settings.model)
+    runtime = runtime or LiquidAudioRuntime(settings.model, device=settings.device)
     app = FastAPI(title="LFM Audio Service", version="0.1.0")
 
     def require_token(authorization: str | None = Header(default=None)) -> None:
@@ -38,7 +38,13 @@ def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | N
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "model": settings.model, "loaded": runtime.loaded}
+        return {
+            "status": "ok",
+            "model": settings.model,
+            "device": settings.device,
+            "loaded": runtime.loaded,
+            "capabilities": {"transcription": True, "speech": settings.device != "cpu"},
+        }
 
     @app.post("/v1/audio/transcriptions", dependencies=[Depends(require_token)])
     async def transcriptions(
@@ -83,4 +89,3 @@ def create_app(settings: Settings | None = None, runtime: LiquidAudioRuntime | N
         return Response(content=audio, media_type="audio/wav")
 
     return app
-

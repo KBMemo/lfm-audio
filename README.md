@@ -4,6 +4,11 @@ Private ASR and TTS service backed by `LiquidAI/LFM2.5-Audio-1.5B-JP`.
 It exposes a minimal OpenAI-compatible audio API for Nyoy and KBMemo; it is not
 a public endpoint and is not managed by llama-switchd.
 
+On a CPU-only host, the upstream Python `liquid-audio` runtime supports ASR but
+not TTS: its LFM2.5 audio detokenizer requires CUDA. The service reports this
+explicitly and returns a 503 for synthesis. Add TTS only after introducing a
+GGUF-compatible LFM audio runner or GPU runtime.
+
 ## API
 
 All audio endpoints require `Authorization: Bearer $LFM_AUDIO_TOKEN`.

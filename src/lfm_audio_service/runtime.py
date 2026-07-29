@@ -30,8 +30,9 @@ class LiquidAudioRuntime:
     ASR_PROMPT = "Perform ASR in japanese."
     TTS_PROMPT = "Perform TTS in japanese."
 
-    def __init__(self, model_id: str):
+    def __init__(self, model_id: str, device: str = "cpu"):
         self.model_id = model_id
+        self.device = device
         self._model = None
         self._processor = None
         self._lock = threading.Lock()
@@ -67,6 +68,10 @@ class LiquidAudioRuntime:
 
     def synthesize(self, text: str) -> bytes:
         with self._lock:
+            if self.device == "cpu":
+                raise GenerationError(
+                    "LFM2.5-Audio の Python runtime は CPU TTS に対応していません。"
+                )
             self._load()
             torch, soundfile, chat_state = self._imports()
 
@@ -108,8 +113,8 @@ class LiquidAudioRuntime:
         if cpu_threads > 0:
             torch.set_num_threads(cpu_threads)
 
-        self._processor = LFM2AudioProcessor.from_pretrained(self.model_id).eval()
-        self._model = LFM2AudioModel.from_pretrained(self.model_id).eval()
+        self._processor = LFM2AudioProcessor.from_pretrained(self.model_id, device=self.device).eval()
+        self._model = LFM2AudioModel.from_pretrained(self.model_id, device=self.device).eval()
 
     @staticmethod
     def _imports():
